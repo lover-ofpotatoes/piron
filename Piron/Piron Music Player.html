@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Piron — Advanced Music Player</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#6a11cb">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: linear-gradient(135deg,#6a11cb,#2575fc);
+  --card: rgba(255,255,255,0.15);
+  --text: #fff;
+  --accent: #ffcc00;
+}
+
+.light {
+  --bg: linear-gradient(135deg,#f8f9ff,#dbe4ff);
+  --card: rgba(0,0,0,0.06);
+  --text: #111;
+}
+
+* {
+  box-sizing:border-box;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin:0;
+  min-height:100vh;
+  background: var(--bg);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color: var(--text);
+  transition: background .4s ease;
+}
+.container {
+  display:flex;
+  gap:20px;
+}
+
+.sidebar {
+  width:220px;
+  max-height:90vh;
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border-radius:20px;
+  padding:14px;
+  overflow:auto;
+}
+
+.sidebar h2 {
+  margin:6px 0 12px;
+  text-align:center;
+}
+.app {
+  width:100%;
+  max-width:440px;
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border-radius:24px;
+  padding:20px;
+  box-shadow:0 20px 40px rgba(0,0,0,.3);
+  animation:fade .5s ease;
+}
+
+@keyframes fade {
+  from{opacity:0; transform:scale(.95)}
+  to{opacity:1; transform:scale(1)}
+}
+
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:1.9rem;
+  font-weight:800;
+}
+
+.theme {
+  cursor:pointer;
+  font-size:1.3rem;
+}
+
+.controls {
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  margin:16px 0;
+}
+
+button {
+  background: rgba(255,255,255,.2);
+  border:none;
+  color:var(--text);
+  padding:12px 16px;
+  border-radius:50%;
+  font-size:18px;
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+button:hover {
+  transform:scale(1.1);
+  background: rgba(255,255,255,.35);
+}
+
+.like.active {
+  color:#ff2f6d;
+  animation:pop .25s ease;
+}
+
+@keyframes pop {
+  50% {transform:scale(1.3)}
+}
+
+.progress {
+  height:6px;
+  background: rgba(255,255,255,.25);
+  border-radius:6px;
+  overflow:hidden;
+}
+
+.bar {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#ffcc00,#ff6a00);
+}
+
+.library {
+  margin-top:15px;
+  max-height:220px;
+  overflow:auto;
+}
+
+.song {
+  display:flex;
+  justify-content:space-between;
+  padding:10px 12px;
+  margin-bottom:8px;
+  border-radius:12px;
+  background: rgba(255,255,255,.12);
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+.song:hover {
+  transform:translateX(4px);
+  background: rgba(255,255,255,.25);
+}
+
+#volume {
+  width: 120px;
+  height: 6px;
+  appearance: none;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.35);
+  outline: none;
+}
+#volume::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+#volume::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+.playlists {
+  margin-top:10px;
+}
+
+.playlist {
+  padding:6px 12px;
+  border-radius:10px;
+  background: rgba(0,0,0,.2);
+  margin-bottom:6px;
+  cursor:pointer;
+}
+
+.upload {
+  margin-top:12px;
+  text-align:center;
+}
+
+label {
+  background: linear-gradient(135deg,#ffcc00,#ff6a00);
+  color:#222;
+  font-weight:700;
+  padding:10px 18px;
+  border-radius:999px;
+  cursor:pointer;
+}
+
+.delete {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.delete:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+button.active {
+  background: var(--accent);
+  color: #111;
+  transform: scale(1.1);
+}
+
+.progress:hover {
+  height: 8px;
+  cursor: pointer;
+}
+
+.progress {
+  transition: height .12s ease;
+}
+
+.time {
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+input {display:none}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="sidebar">
+    <h2>🎧 Library</h2>
+    <div class="library" id="library"></div>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      🎵 Piron
+      <span class="theme" id="themeBtn">🌙</span>
+    </div>
+
+    <div class="controls">
+      <button id="shuffleBtn">🔀</button>
+      <button id="playBtn">▶</button>
+      <button id="pauseBtn">⏸</button>
+      <button id="repeatBtn">🔁</button>
+      <button id="likeBtn" class="like">❤️</button>
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
+    </div>
+
+    <div class="progress">
+      <div class="bar" id="bar"></div>
+    </div>
+
+<div class="time" id="time">0:00 / 0:00</div>
+
+    <div class="playlists">
+      <button id="newPlaylist">➕ Playlist</button>
+      <div id="playlistList"></div>
+    </div>
+
+    <div class="upload">
+      <label>Upload Songs
+        <input type="file" id="fileInput" accept="audio/*" multiple>
+      </label>
+    </div>
+  </div>
+</div>
+<audio id="player"></audio>
+<script>
+const player = document.getElementById("player");
+const bar = document.getElementById("bar");
+const library = document.getElementById("library");
+const fileInput = document.getElementById("fileInput");
+const likeBtn = document.getElementById("likeBtn");
+const themeBtn = document.getElementById("themeBtn");
+const playlistList = document.getElementById("playlistList");
+const volume = document.getElementById("volume");
+const timeDisplay = document.getElementById("time");
+
+player.volume = parseFloat(localStorage.getItem("pironVolume")) || 0.8;
+volume.value = player.volume;
+
+volume.oninput = () => {
+  player.volume = volume.value;
+  localStorage.setItem("pironVolume", volume.value);
+};
+
+let songs = [];
+let liked = JSON.parse(localStorage.getItem("pironLikes") || "{}");
+let playlists = JSON.parse(localStorage.getItem("pironPlaylists") || "{}");
+
+let shuffle = false;
+let repeat = false;
+let current = -1;
+
+let db;
+
+const request = indexedDB.open("pironDB", 1);
+
+request.onupgradeneeded = e => {
+  db = e.target.result;
+  db.createObjectStore("songs", { keyPath: "id" });
+};
+
+request.onsuccess = e => {
+  db = e.target.result;
+  loadSongs();
+};
+
+request.onerror = e => {
+  console.error("DB error", e);
+};
+
+function save() {
+  localStorage.setItem("pironLikes", JSON.stringify(liked));
+  localStorage.setItem("pironPlaylists", JSON.stringify(playlists));
+}
+
+function render() {
+  library.innerHTML = "";
+
+  songs.forEach((s, i) => {
+    const d = document.createElement("div");
+    d.className = "song";
+
+    const name = document.createElement("span");
+    name.textContent = s.name;
+    name.onclick = () => playSong(i);
+
+    const del = document.createElement("button");
+    del.textContent = "🗑";
+    del.className = "delete";
+    del.onclick = e => {
+      e.stopPropagation();
+      deleteSong(s.id);
+    };
+
+    d.appendChild(name);
+    d.appendChild(del);
+    library.appendChild(d);
+  });
+}
+
+function deleteSong(id) {
+  if (!confirm("Delete this song?")) return;
+
+  const tx = db.transaction("songs", "readwrite");
+  const store = tx.objectStore("songs");
+
+  store.delete(id);
+
+  tx.oncomplete = () => {
+    loadSongs();
+  };
+}
+
+function renderPlaylists() {
+  playlistList.innerHTML="";
+  Object.keys(playlists).forEach(name=>{
+    const d=document.createElement("div");
+    d.className="playlist";
+    d.textContent=name;
+    d.onclick=()=>loadPlaylist(name);
+    playlistList.appendChild(d);
+  });
+}
+function addToPlaylist(name, id) {
+  playlists[name].push(id);
+  save();
+}
+function playSong(i) {
+  current=i;
+player.src = songs[i].url;
+  player.play();
+  updateLike();
+}
+
+player.ontimeupdate = () => {
+  const percent = (player.currentTime / player.duration) * 100 || 0;
+  bar.style.width = percent + "%";
+
+  timeDisplay.textContent =
+    formatTime(player.currentTime) + " / " + formatTime(player.duration);
+};
+
+function formatTime(t) {
+  if (!t) return "0:00";
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  return m + ":" + (s < 10 ? "0" : "") + s;
+}
+
+const progress = document.querySelector(".progress");
+
+let isScrubbing = false;
+
+function seek(e) {
+  const rect = progress.getBoundingClientRect();
+  const percent = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
+  player.currentTime = percent * player.duration;
+}
+
+progress.addEventListener("mousedown", e => {
+  isScrubbing = true;
+  seek(e);
+});
+
+document.addEventListener("mousemove", e => {
+  if (isScrubbing) seek(e);
+});
+
+document.addEventListener("mouseup", () => {
+  isScrubbing = false;
+});
+
+player.onended=()=>{
+  if(repeat) return player.play();
+  nextSong();
+};
+
+function nextSong() {
+  if (!songs.length) return;
+
+  if (shuffle) {
+    current = Math.floor(Math.random() * songs.length);
+  } else {
+    current = (current + 1) % songs.length;
+  }
+
+  playSong(current);
+}
+
+function updateLike() {
+  likeBtn.classList.toggle("active",liked[songs[current]?.id]);
+}
+
+function loadSongs() {
+  const tx = db.transaction("songs", "readonly");
+  const store = tx.objectStore("songs");
+  const req = store.getAll();
+
+  req.onsuccess = () => {
+    // Clean old URLs
+    songs.forEach(s => {
+      if (s.url) URL.revokeObjectURL(s.url);
+    });
+
+    songs = req.result.map(s => ({
+      ...s,
+      url: URL.createObjectURL(s.blob)
+    }));
+
+if (current >= songs.length) {
+  current = -1;
+  player.pause();
+  player.src = "";
+}
+    render();
+  };
+}
+
+fileInput.onchange = e => {
+  [...e.target.files].forEach(file => {
+    const tx = db.transaction("songs", "readwrite");
+    const store = tx.objectStore("songs");
+
+    store.add({
+      id: crypto.randomUUID(),
+      name: file.name,
+      blob: file
+    });
+
+    tx.oncomplete = () => loadSongs();
+  });
+};
+
+likeBtn.onclick=()=>{
+  if(current<0) return;
+  liked[songs[current].id]=!liked[songs[current].id];
+  save();
+updateLike();
+render();
+};
+
+document.getElementById("playBtn").onclick=()=>{
+  if(current === -1 && songs.length) playSong(0);
+  else player.play();
+};
+document.getElementById("pauseBtn").onclick=()=>player.pause();
+document.getElementById("shuffleBtn").onclick = e => {
+  shuffle = !shuffle;
+  e.target.classList.toggle("active", shuffle);
+};
+
+document.getElementById("repeatBtn").onclick = e => {
+  repeat = !repeat;
+  e.target.classList.toggle("active", repeat);
+};
+
+themeBtn.onclick=()=>{
+  document.body.classList.toggle("light");
+  themeBtn.textContent=document.body.classList.contains("light")?"☀":"🌙";
+};
+
+document.getElementById("newPlaylist").onclick=()=>{
+  const name=prompt("Playlist name:");
+  if(!name) return;
+  playlists[name]=[];
+  save(); renderPlaylists();
+};
+
+function loadPlaylist(name){
+  const ids = playlists[name];
+  library.innerHTML = "";
+  songs.filter(s => ids.includes(s.id)).forEach((s,i)=>{
+    const d=document.createElement("div");
+    d.className="song";
+    d.textContent=s.name;
+    d.onclick=()=>playSong(songs.indexOf(s));
+    library.appendChild(d);
+  });
+}
+
+document.addEventListener("keydown", e => {
+  // Prevent page scrolling with space
+  if (e.code === "Space") e.preventDefault();
+
+  if (!player.src) return;
+
+  switch (e.code) {
+    case "Space":
+      if (player.paused) player.play();
+      else player.pause();
+      break;
+
+    case "ArrowRight":
+      player.currentTime = Math.min(
+        player.currentTime + 5,
+        player.duration
+      );
+      break;
+
+    case "ArrowLeft":
+      player.currentTime = Math.max(
+        player.currentTime - 5,
+        0
+      );
+      break;
+  }
+});
+
+render();
+</script>
+
+</body>
+</html>
